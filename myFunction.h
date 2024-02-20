@@ -12,9 +12,21 @@
 
 
 
-char* getInputFromUser();
-// cp file file
-// [cp,file,file]
+/**
+ * Reads a string from the standard input (stdin) until a newline character is encountered.
+ *
+ * This function dynamically allocates memory to store the input string, including
+ * space for the null terminator. The caller is responsible for freeing this memory
+ * when it is no longer needed.
+ *
+ * @return A pointer to the dynamically allocated string containing the user input,
+ *         excluding the newline character. Returns NULL if memory allocation fails.
+ *
+ * @warning The caller is responsible for freeing the memory allocated for the
+ *          returned string using free().
+ */
+char* getInputFromUser(void);
+
 /**
  * Splits a string into individual tokens based on whitespace.
  * 
@@ -38,4 +50,15 @@ char* getInputFromUser();
  */
 char** splitArgument(char*);
 
+
+/**
+ * Retrieves and prints the current working directory to standard output.
+ *
+ * This function attempts to obtain the current working directory path and prints
+ * it to the standard output. If successful, the directory path is followed by a
+ * dollar sign ('$'). If an error occurs, an error message is printed instead.
+ *
+ * @warning This function does not return the directory path but prints it directly
+ *          to the standard output.
+ */
 void getLocation(void);
