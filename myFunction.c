@@ -373,12 +373,6 @@ void delete(char *input)
 }
 
 void mypipe(char **argv1, char **argv2) {
-    for (int i = 0; argv1[i] != NULL; i++) {
-    printf("argv1[%d]: %s\n", i, argv1[i]);
-}
-for (int i = 0; argv2[i] != NULL; i++) {
-    printf("argv2[%d]: %s\n", i, argv2[i]);
-}
     int pipefd[2];
     pid_t cpid1, cpid2;
 
@@ -734,15 +728,16 @@ void wordCount(char **args)
 void help(void)
 {
     printf("Available commands:\n");
-    printf("  cd <directory> - Change the current directory to <directory>\n");
-    printf("  cp <source> <destination> - Copy <source> to <destination>\n");
-    printf("  delete <file> - Delete <file>\n");
-    printf("  move <source> <destination> - Move <source> to <destination>\n");
-    printf("  echo>> <text> <file> - Append <text> to <file>\n");
-    printf("  echo> <text> <file> - Overwrite <file> with <text>\n");
-    printf("  readI <file> - Display the content of <file>\n");
-    printf("  wc -l <file> - Count the lines in <file>\n");
-    printf("  wc -w <file> - Count the words in <file>\n");
-    printf("  exit - Exit the shell\n");
-    printf("  help - Display this help message\n");
+    printf("  cd <directory> - Change the current directory to <directory>.\n");
+    printf("  cp <source> <destination> - Copy <source> file to <destination>.\n");
+    printf("  delete <file> - Delete the specified <file>.\n");
+    printf("  move <source> <destination> - Move <source> to <destination>.\n");
+    printf("  echo >> <text> <file> - Append <text> to <file>.\n");
+    printf("  echo > <text> <file> - Overwrite <file> with <text>.\n");
+    printf("  readI <file> - Display the content of <file>.\n");
+    printf("  wc -l <file> - Count the number of lines in <file>.\n");
+    printf("  wc -w <file> - Count the number of words in <file>.\n");
+    printf("  exit - Exit the shell.\n");
+    printf("  help - Display this help message.\n");
 }
+

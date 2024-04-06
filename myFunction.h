@@ -17,235 +17,452 @@
 #define boldOff() printf("\e[m")
 
 /**
- * Reads a string from the standard input (stdin) until a newline character is encountered.
+ * Retrieves input from the user until a newline is entered. Dynamically allocates
+ * memory for the input string, which must be freed by the caller to avoid memory leaks.
+ * This function is useful for interactive command-line applications where input from
+ * the user is required. It supports input of arbitrary length, ensuring that the program
+ * can handle user input flexibly.
  *
- * This function dynamically allocates memory to store the input string, including
- * space for the null terminator. The caller is responsible for freeing this memory
- * when it is no longer needed.
+ * Usage example:
+ *   char *userInput = getInputFromUser();
+ *   printf("You entered: %s\n", userInput);
+ *   free(userInput); // Important to free the allocated memory
  *
- * @return A pointer to the dynamically allocated string containing the user input,
- *         excluding the newline character. Returns NULL if memory allocation fails.
- *
- * @warning The caller is responsible for freeing the memory allocated for the
- *          returned string using free().
+ * @return A pointer to the dynamically allocated string containing the user's input.
+ *         Returns NULL if there was an error allocating memory.
  */
 char *getInputFromUser(void);
 
 /**
- * Custom string tokenizer that supports consecutive delimiters and remembers the
- * state between calls.
+ * Custom implementation of the string tokenization function that handles consecutive
+ * delimiters and supports state persistence between calls. This function is designed
+ * to be a more flexible alternative to the standard `strtok` function provided by C.
+ * Unlike `strtok`, which uses a static buffer to maintain state between calls, `myStrtok`
+ * manages its state in a way that makes it safe to use in concurrent or reentrant code.
  *
- * This function is similar to the standard strtok function but supports consecutive
- * delimiters and uses a static variable to remember the state between calls. It can
- * be used to tokenize a string by repeatedly calling this function until NULL is
- * returned.
+ * The function splits the input string `str` into tokens, which are sequences of characters
+ * separated by characters found in `delim`. On the first call, `str` should point to the
+ * string to be tokenized. Subsequent calls should pass NULL as `str` to continue tokenizing
+ * the same string. `myStrtok` allows consecutive delimiters in the input string and treats
+ * them as a single delimiter.
  *
- * @param str The string to tokenize on the first call. Subsequent calls should pass
- *            NULL as this parameter to continue tokenizing the same string.
- * @param delim A null-terminated string containing the delimiter characters.
+ * Usage example:
+ *   char str[] = "This,is,,a,test";
+ *   const char delim[] = ",";
+ *   char *token = myStrtok(str, delim);
+ *   while (token != NULL) {
+ *       printf("%s\n", token);
+ *       token = myStrtok(NULL, delim);
+ *   }
  *
- * @return On success, returns a pointer to the next token found in the string. Returns
- *         NULL if there are no more tokens or if `str` is NULL on the first call.
+ * @param str The string to tokenize on the first call; NULL to get the next token.
+ * @param delim A null-terminated string containing the delimiters.
+ * @return A pointer to the next token found in the string. Returns NULL when no more
+ *         tokens are found. Each returned token pointer points to a null-terminated string.
  */
 char *myStrtok(char *str, const char *delim);
 
-/**
- * Splits a string into individual tokens based on whitespace.
- *
- * This function takes a string as input and tokenizes it based on whitespace
- * characters (space, tab, newline). It dynamically allocates memory for an
- * array of strings to store the tokens. The caller is responsible for freeing
- * the memory allocated for the array and its elements when it's no longer needed.
- *
- * @param input A pointer to the string to be split.
- *
- * @return A dynamically allocated array of strings (char**) containing the tokens.
- *         The last element of the array is NULL. Returns NULL if input is NULL
- *         or if memory allocation fails.
- *
- * @note The input string will be modified (tokenized) by this function.
- *       Make sure to use a copy of the original string if preservation
- *       of the original string is required.
- *
- * @warning The caller is responsible for freeing the memory allocated for
- *          the returned array and its elements using free().
- */
-char **splitArgument(char *input);
 
 /**
- * Retrieves and prints the current working directory to standard output.
+ * Splits a given string into an array of substrings based on spaces as delimiters,
+ * leveraging a custom string tokenization function `myStrtok`. This function is
+ * particularly useful for parsing command-line inputs into separate arguments where
+ * arguments are separated by spaces. It dynamically allocates memory for the array
+ * of argument strings and each argument string individually.
  *
- * This function attempts to obtain the current working directory path and prints
- * it to the standard output. If successful, the directory path is followed by a
- * dollar sign ('$'). If an error occurs, an error message is printed instead.
+ * The function iterates through the input string, tokenizing it by spaces. Each token
+ * is added to a dynamically growing array of strings, which is resized as needed using
+ * `realloc` to accommodate new tokens.
  *
- * @warning This function does not return the directory path but prints it directly
- *          to the standard output.
+ * Note: It's essential to free the memory allocated for the array and its contents
+ *       when they are no longer needed to avoid memory leaks.
+ *
+ * Usage example:
+ *   char input[] = "ls -l /home/user";
+ *   char **args = splitArgument(input);
+ *   for (int i = 0; args[i] != NULL; i++) {
+ *       printf("%s\n", args[i]);
+ *   }
+ *   // Free allocated memory here
+ *
+ * @param str The input string to be split into arguments.
+ * @return A pointer to a dynamically allocated array of strings, where each string
+ *         is a space-delimited substring of the input. The array is null-terminated.
+ *         Returns NULL if memory allocation fails at any point.
  */
-void getLocation(void);
-/**
- * Prints a welcome message to the standard output.
- *
- * This function displays a welcome message along with ASCII art and additional
- * information such as a GitHub repository link and a quote. It is intended to
- * be called at the start of the program to greet the user.
- */
-void welcome(void);
+char **splitArgument(char *str);
+
 
 /**
- * Processes the 'logout' command by terminating the program if the user inputs 'exit'.
+ * Prints the current working directory along with the username and hostname in a
+ * stylized format. This function is useful for shell environments to display a prompt
+ * that includes contextual information about the user's current location within the
+ * filesystem, as well as the system identity.
  *
- * This function checks if the first token of the user input is 'exit'. If so, it
- * terminates the program. Otherwise, it prints a message indicating that the command
- * is not recognized. It also handles memory cleanup for the tokens generated by
- * splitArgument.
+ * The function retrieves the current working directory using `getcwd`, the current
+ * user's username from the user's UID, and the system's hostname. If retrieving the
+ * working directory or hostname fails, an error message is printed to standard error.
  *
- * @param str A string containing the user input to be processed.
+ * The output is color-coded for visual distinction, with the username and hostname
+ * displayed in cyan and the working directory in blue. ANSI escape codes are used
+ * for coloring, making this function suitable for terminals that support such codes.
+ *
+ * Usage example:
+ *   getLocation();
+ *   // output: username@hostname:/path/to/directory$
+ *
+ * Note: This function does not return any value. It directly prints the formatted
+ *       string to standard output.
  */
-void logout(char *str);
+void getLocation();
 
 /**
- * Changes the current working directory to the one specified by the user.
+ * Prints a welcome message along with a stylized ASCII art logo to standard output.
+ * This function is designed to be called at the start of a shell or application to greet
+ * the user and provide some basic information or motivation. The message includes a
+ * URL pointing to a GitHub repository, which could be replaced or removed as needed
+ * based on the application's context.
  *
- * This function attempts to change the current working directory to the path
- * specified in the `args` array. If the path is not provided or the change
- * directory operation fails, it prints an appropriate message to the standard output.
+ * The ASCII art and the quotes are meant to add a touch of personality and humor to the
+ * application, making the initial interaction with the user more engaging. This function
+ * demonstrates how simple text output can be used effectively to enhance user experience.
  *
- * @param args An array of strings representing the command and its arguments. The
- *             first element is assumed to be "cd" and the second element is the
- *             path to change to.
+ * Usage example:
+ *   welcome();
+ *   // Outputs the ASCII art followed by "Welcome to myShell" and additional text.
+ *
+ * Note: This function does not take any parameters and does not return any value. It
+ *       directly prints the welcome message and ASCII art to standard output.
+ */
+void welcome();
+
+/**
+ * Terminates the program with a message indicating the exit. This function is intended
+ * to be called when the program should be exited cleanly. It displays a message to standard
+ * output and then calls `exit` with `EXIT_SUCCESS` to end the program.
+ *
+ * The `trimmedInput` parameter, while not used within the function, signifies that this
+ * function responds to a specific command, potentially after processing such as trimming.
+ * However, the function's behavior does not change based on this input.
+ *
+ * Usage:
+ *   logout(trimmedInput);
+ *
+ * @param trimmedInput A string that led to the invocation of this function.
+ */
+void logout(char* trimmedInput);
+
+
+/**
+ * Changes the current working directory of the process to the one specified in the
+ * arguments. This function attempts to mimic the behavior of the shell command `cd`
+ * by changing the process's working directory to the path given as the second argument
+ * in the `args` array.
+ *
+ * If no path is provided (i.e., `args[1]` is NULL), or if the path processing fails,
+ * an error message is printed to standard error indicating the correct usage or
+ * reporting the failure to process the path.
+ *
+ * The path provided in `args[1]` is first normalized to remove any extraneous characters
+ * or formatting issues. This normalized path is then used in a call to `chdir()` to
+ * change the directory. If `chdir()` fails, an error message is printed using `perror`.
+ *
+ * Note: The function dynamically allocates memory for the normalized path, which is
+ * subsequently freed before the function returns.
+ *
+ * @param args An array of strings where `args[0]` is assumed to be "cd" and `args[1]`
+ *             is the target directory path. The array is expected to end with a NULL
+ *             pointer.
  */
 void cd(char **args);
 
+
 /**
- * Copies a file from a source path to a destination path.
+ * Copies the contents of one file to another. The function expects the source and 
+ * destination file paths to be specified in the `args` array. It normalizes both paths 
+ * before attempting the copy operation. If either path cannot be normalized, or if 
+ * any of the required arguments are missing, an error message is displayed, and the 
+ * function returns without performing the copy.
  *
- * This function copies the contents of the file located at the source path to
- * a new file at the destination path. If any of the paths are not provided or
- * an error occurs during the copying process, it prints an appropriate message
- * to the standard output.
+ * The function opens the source file in binary read mode ('rb') and the destination 
+ * file in binary write mode ('wb'), ensuring that the copy is performed in binary 
+ * mode to preserve the exact content of the file, including any special characters 
+ * or binary data. The contents are read from the source file into a buffer, then 
+ * written from the buffer to the destination file, until the entire file has been 
+ * copied. 
  *
- * @param args An array of strings where the first element is the command, the
- *             second element is the source file path, and the third element is
- *             the destination file path.
+ * After the operation is complete, the function frees the memory allocated for 
+ * the normalized paths and closes both files. If the copy is successful, a 
+ * confirmation message is printed to standard output.
+ *
+ * @param args An array of strings containing the command name, the source file path,
+ *             and the destination file path.
  */
 void cp(char **args);
 
 /**
- * Deletes the file at the specified path.
+ * Deletes a file specified by the input string. The function first tokenizes the input
+ * to extract the file path, then normalizes this path. If the path is successfully
+ * normalized, it attempts to delete the file using the `remove` function. If the file
+ * cannot be deleted, an error message is printed.
  *
- * This function attempts to delete the file located at the path specified in the
- * `args` array. If the path is not provided or the deletion fails, it prints an
- * appropriate message to the standard output.
+ * Before attempting deletion, the function checks for valid input and prints a usage
+ * message if the expected file path argument is not provided or if the input cannot
+ * be tokenized properly. It also handles errors in path normalization by reporting
+ * failure and exiting early.
  *
- * @param args An array of strings where the first element is the command and the
- *             second element is the path of the file to be deleted.
+ * After attempting to delete the file, whether successful or not, the function frees
+ * all dynamically allocated memory used for path normalization and argument tokenization.
+ *
+ * Note: This function is designed for use within applications that require file
+ * management capabilities, allowing for the deletion of files through user commands
+ * or programmatic input.
+ *
+ * @param input A string containing the 'delete' command followed by the file path to delete.
  */
 void delete(char *input);
 
 /**
- * Implements a simple pipe between two commands.
+ * Sets up a unidirectional pipe between two processes, allowing the standard output of
+ * the first command to be directed to the standard input of the second command, mimicking
+ * the behavior of a Unix shell pipe. This function creates a pipe, then forks two child
+ * processes to execute the given external commands. It is intended to showcase inter-process
+ * communication through pipes in scenarios where the shell itself might not have suitable
+ * built-in commands for demonstration.
  *
- * This function creates a UNIX pipe and forks two processes to execute the
- * specified commands, where the output of the first command (argv1) is piped
- * into the input of the second command (argv2).
+ * The function performs the following steps:
+ * 1. Creates a pipe using `pipe()`.
+ * 2. Forks the first child process:
+ *    - The child redirects its standard output to the write end of the pipe, then
+ *      executes the first command using `execvp`.
+ * 3. Forks the second child process:
+ *    - This child connects its standard input to the read end of the pipe, then
+ *      executes the second command using `execvp`.
+ * 4. The parent process waits for both child processes to terminate before returning.
  *
- * @param argv1 An array of strings representing the first command and its arguments.
- * @param argv2 An array of strings representing the second command and its arguments.
+ * If any step fails (creating a pipe, forking a process, or executing a command), an
+ * error message is printed, and the program exits with `EXIT_FAILURE`.
+ *
+ * Note: This function assumes `argv1` and `argv2` are null-terminated arrays of strings
+ * representing the command and its arguments to be executed by the child processes. The
+ * use of external commands is necessary to demonstrate the functionality, as the custom
+ * shell may not have suitable internal commands for such an illustration.
+ *
+ * @param argv1 A null-terminated array of strings for the first command and its arguments.
+ * @param argv2 A null-terminated array of strings for the second command and its arguments.
  */
 void mypipe(char **argv1, char **argv2);
 
+
 /**
- * Moves a file from a source path to a destination path.
+ * Moves or renames a file from a source path to a destination path. This function attempts
+ * to mimic the behavior of the Unix 'mv' command. It first checks if the source and
+ * destination paths are provided. If not, it outputs a usage message. Both paths are
+ * normalized to handle any inconsistencies in their format.
  *
- * This function renames the file located at the source path to the destination
- * path, effectively moving it. If any of the paths are not provided or the move
- * operation fails, it prints an appropriate message to the standard output.
+ * Before attempting to move the file, it checks if the source file exists using `access`.
+ * If the source file does not exist, an error message is displayed, and the function
+ * exits.
  *
- * @param args An array of strings where the first element is the command, the
- *             second element is the source file path, and the third element is
- *             the destination file path.
+ * The function then attempts to move the file using `rename`. If moving the file fails
+ * because the destination is a directory (`errno` is `EISDIR`), it constructs a new
+ * destination path by appending the source file name to the destination directory path.
+ * It then tries to move the file again. If the move is successful, a confirmation message
+ * is printed. Otherwise, an error message is displayed.
+ *
+ * Memory allocated for normalized paths is freed before the function exits. Additional
+ * memory allocated for constructing the new destination path in case of a directory
+ * destination is also freed after use.
+ *
+ * @param args An array of strings where `args[1]` is the source file path and `args[2]`
+ *             is the destination path or directory. The array should end with a NULL
+ *             pointer.
  */
 void move(char **args);
+
+
 /**
- * Appends a string to a file.
+ * Appends the provided text to the specified file. This function takes an array of
+ * strings where the text to append is specified up to the ">>" marker, and the file path
+ * follows the marker. It opens the specified file in append mode and writes the text
+ * to it, creating the file if it does not exist.
  *
- * This function appends the given string (before the ">>" symbol in `args`)
- * to the file specified after the ">>" symbol in `args`. If the file cannot
- * be opened or the ">>" symbol is not found, it prints an appropriate error message.
+ * This functionality is similar to the shell's append redirect operation. It's useful
+ * for logging or adding information to a file without overwriting its current contents.
  *
- * @param args An array of strings containing the command, the string to append,
- *             the ">>" symbol, and the file path.
+ * Usage example:
+ *   args = {"echoppend", "This text will be appended.", ">>", "log.txt", NULL};
+ *   echoppend(args);
+ *
+ * The function checks for the existence of the ">>" marker to separate the text from
+ * the file path. If the file cannot be opened or written to, an error message is printed
+ * to standard error.
+ *
+ * @param args An array of strings containing the text to append, the ">>" marker,
+ *             and the path to the file. The array is expected to end with a NULL pointer.
  */
 void echoppend(char **args);
 
+
 /**
- * Writes (overwrites) a string to a file.
+ * Writes (overwrites) the provided text to a file specified in the arguments. This function
+ * parses an array of strings where the text to be written is specified up to the ">" marker,
+ * and the file path is indicated after the marker. It opens the specified file in write mode,
+ * which creates the file if it does not exist or truncates it to zero length if it does, and
+ * then writes the text to the file.
  *
- * This function writes the given string (before the ">" symbol in `args`) to
- * the file specified after the ">" symbol in `args`, overwriting any existing
- * content. If the file cannot be opened or the ">" symbol is not found, it prints
- * an appropriate error message.
+ * This functionality mimics the shell's overwrite redirect operation, allowing for simple
+ * text output to files within a program. It's useful for generating logs, reports, or any
+ * form of output that requires saving to a file.
  *
- * @param args An array of strings containing the command, the string to write,
- *             the ">" symbol, and the file path.
+ * Usage example:
+ *   args = {"echorite", "This text will overwrite the file.", ">", "output.txt", NULL};
+ *   echorite(args);
+ *
+ * The function identifies the ">" marker to separate the text from the file path. In case
+ * the file cannot be opened or written to, an error message is printed to standard error.
+ *
+ * @param args An array of strings containing the text to write, the ">" marker, and the
+ *             path to the file. The array is expected to end with a NULL pointer.
  */
 void echorite(char **args);
 
+
+/**
+ * Normalizes a file path by removing redundant slashes, trimming leading and trailing
+ * whitespace, and eliminating surrounding quotes if present. This function is useful
+ * in command-line applications or scripts where file paths may be input by the user
+ * and need to be sanitized before use. It dynamically allocates memory for the
+ * normalized path, which must be freed by the caller.
+ *
+ * The normalization process includes:
+ * - Trimming leading and trailing whitespace.
+ * - Removing surrounding quotes (single or double).
+ * - Replacing consecutive slashes with a single slash.
+ *
+ * Usage example:
+ *   char rawPath[] = "  \"/some///path/\"  ";
+ *   char *normPath = normalizePath(rawPath);
+ *   printf("Normalized path: %s\n", normPath);
+ *   free(normPath); // Free the dynamically allocated memory
+ *
+ * @param path The file path string to normalize.
+ * @return A dynamically allocated string containing the normalized path. The caller
+ *         is responsible for freeing this memory. Returns NULL if memory allocation fails.
+ */
 char *normalizePath(char *path);
 
+/**
+ * Splits a command string into two separate strings based on the first occurrence
+ * of a pipe symbol ('|'). This function is particularly useful for parsing command
+ * lines that involve piping between two commands in a shell-like interface. The
+ * function dynamically allocates memory for an array of two strings, representing
+ * the command before and after the pipe symbol. It's the caller's responsibility
+ * to free the allocated memory for both the array and the strings within it to
+ * prevent memory leaks.
+ *
+ * If the input command does not contain a pipe symbol, the returned array will
+ * contain the original command as its first element and NULL as its second element.
+ *
+ * Usage example:
+ *   char command[] = "ls -l | grep 'Jun'";
+ *   char **splitCommands = splitOnPipe(command);
+ *   if (splitCommands[0] && splitCommands[1]) {
+ *       printf("Command 1: %s\n", splitCommands[0]);
+ *       printf("Command 2: %s\n", splitCommands[1]);
+ *   }
+ *   // Free allocated memory
+ *   free(splitCommands[0]);
+ *   free(splitCommands[1]);
+ *   free(splitCommands);
+ *
+ * @param command The command string to be split on the first pipe symbol.
+ * @return An array of two dynamically allocated strings split on the first pipe symbol.
+ *         The caller must free the allocated memory. If there's no pipe in the command,
+ *         the second string in the array will be NULL.
+ */
 char** splitOnPipe(const char* command);
 
-void readFromStdin(char **args);
-
-void writeToStdout(char **args);
-
+/**
+ * Removes leading and trailing whitespace from a string. This function modifies the input
+ * string in place and returns a pointer to the modified string. Whitespace is defined by
+ * the standard `isspace` function, which includes spaces, tabs, newlines, and other common
+ * whitespace characters.
+ *
+ * The function iterates over the string from the beginning to find the first non-whitespace
+ * character and then from the end to find the last non-whitespace character. It then
+ * terminates the string at the last non-whitespace character, effectively removing trailing
+ * whitespace. If the string is entirely whitespace, the function returns a pointer to the
+ * string's null terminator, resulting in an empty string.
+ *
+ * Usage example:
+ *   char example[] = "  hello world  ";
+ *   printf("'%s'\n", trim(example));
+ *   // Output: 'hello world'
+ *
+ * Note: Since this function modifies the input string in place, it does not allocate new
+ *       memory and thus does not require any memory to be freed. However, this also means
+ *       it should not be used with string literals or any read-only strings, as attempting
+ *       to modify such strings results in undefined behavior.
+ *
+ * @param str The string to be trimmed. Must be a modifiable string, not a string literal.
+ * @return A pointer to the trimmed string, which is the same as the input string modified
+ *         in place.
+ */
 char* trim(char* str);
 
+
 /**
- * Displays the content of a file to the standard output.
+ * Reads and displays the content of a specified file. This function expects an array of
+ * strings as its argument, where the first element after the command itself should be the
+ * file path to read. It first normalizes the provided file path to handle any irregularities
+ * like redundant slashes or surrounding quotes. If the file path is not provided or the
+ * normalization fails, it prints an error message to standard error.
  *
- * This function reads and prints the content of the file specified in `args`
- * to the standard output. If the file cannot be opened, it silently fails.
+ * Upon successfully opening the file, `readI` reads the file content line by line into a
+ * buffer and prints it to standard output until reaching the end of the file. It then frees
+ * the dynamically allocated memory for the normalized path and closes the file.
  *
- * @param args An array of strings where the first element is the command and the
- *             second element is the path of the file to read.
+ * Usage example:
+ *   char *args[] = {"readI", "example.txt", NULL};
+ *   readI(args);
+ *   // This will print the content of 'example.txt' to standard output.
+ *
+ * Note: This function is designed to be used in a shell or command-line utility where
+ *       reading file content directly to the terminal is a common operation. It provides
+ *       basic error handling for missing arguments and file access issues.
+ *
+ * @param args An array of strings containing the function name and the path to the file
+ *             to be read. The array is expected to end with a NULL pointer to mark the end
+ *             of arguments.
  */
 void readI(char **args);
-/**
- * Counts the words in a file and returns the count.
- *
- * This function opens the file specified by the `file` parameter and counts
- * the number of words contained within, using whitespace as the delimiter.
- * The file is closed before returning.
- *
- * @param file A pointer to an open file from which to count words.
- * @return The number of words in the file.
- */
-int countWords(FILE *file);
+
+
 
 /**
- * Counts the lines in a file and returns the count.
+ * Counts the number of words or lines in the specified file, depending on the option
+ * provided. This function is designed to mimic the basic functionality of the Unix
+ * `wc` command, but tailored to work within the constraints of this application. It
+ * accepts an array of strings where the first element (after the function name) should
+ * be the option ("-w" for words, "-l" for lines) and the second element should be the
+ * path to the file to be analyzed.
  *
- * This function opens the file specified by the `file` parameter and counts
- * the number of lines contained within. The file is closed before returning.
+ * Usage example:
+ *   char *args[] = {"wordCount", "-w", "example.txt", NULL};
+ *   wordCount(args); // Counts words in example.txt
  *
- * @param file A pointer to an open file from which to count lines.
- * @return The number of lines in the file.
- */
-int countLines(FILE *file);
-
-/**
- * Counts words or lines in a file, based on the specified option.
+ *   char *args[] = {"wordCount", "-l", "example.txt", NULL};
+ *   wordCount(args); // Counts lines in example.txt
  *
- * This function counts either the number of words or the number of lines in
- * the file specified in `args`, based on whether the "-w" (words) or "-l"
- * (lines) option is provided as the first argument.
+ * The function does not return a value but prints the count directly to standard output.
+ * If the file cannot be opened or read, an error message is printed instead.
  *
- * @param args An array of strings containing the command, the option ("-w" or "-l"),
- *             and the path of the file to process.
+ * @param args An array of strings containing the function name, the option ("-w" or "-l"),
+ *             and the path to the file. The array is expected to end with a NULL pointer.
  */
 void wordCount(char **args);
+
 
 /**
  * Displays a list of available commands and their descriptions.
