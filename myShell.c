@@ -1,110 +1,118 @@
-#include "myShell.h"
-#include "myFunction.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include "myFunction.h" 
 
-int main()
-{
-    system("clear");
-    for (int i = 0; i < 100; i++)
-    {
-        welcome();
-        system("clear");
-        
-        welcome1();
-    }
-    while (1)
-    {
-        getLocation();
-        char *input = getInputFromUser();
-        // cp\0<file>\0<file>\0
-        // cp <file> <file>\0
-        // [cp, <file>, <file> ]
-        // [input,input+3,input+10]
+int main(void) {
+    char *input;
+    char **args;
+    char *command;
 
-        char **arg = splitArgument(input);
-        int i = 0;
-        while (*(arg + i) != NULL)
-        {
-            puts(arg[i]);
-            i++;
-        }
+    welcome(); 
 
-        if (strcmp(input, "exit") == 0)
-        {
-            free(arg);
+    while (1) {
+        getLocation();              
+        printf("> ");
+        input = getInputFromUser(); 
+
+        if (input == NULL || strlen(input) == 0) {
             free(input);
-            puts("log out");
-            break;
+            continue;
+        }
+    char *inputCopy = strdup(input); 
+        if (!inputCopy) {
+        perror("Failed to copy input");
+        free(input);
+        continue;
+        }
+    char* trimmedInput = trim(input);
+    if (strncmp(trimmedInput, "exit", 4) == 0) {
+        logout(trimmedInput); 
+    }
+        char **splitCommands = splitOnPipe(input);
+        if (splitCommands) {
+            char **argv1 = splitArgument(splitCommands[0]);
+            char **argv2 = splitArgument(splitCommands[1]);
+
+            mypipe(argv1, argv2); 
+
+            free(argv1);
+            free(argv2);
+            free(splitCommands[0]);
+            free(splitCommands[1]);
+            free(splitCommands);
+        } else {
+            args = splitArgument(input);
+
+            if (args == NULL) {
+                free(input);
+                continue;
+            }
+            int i = 0;
+
+
+            command = args[0];
+
+            if (strcmp(command, "help") == 0) {
+                help();
+            } else if (strcmp(command, "cd") == 0) {
+                cd(args);
+            } else if (strcmp(command, "cp") == 0) {
+                cp(args);
+            } else if (strcmp(command, "delete") == 0) {
+                delete(inputCopy);
+            } else if (strcmp(command, "move") == 0) {
+                move(args);
+            }  else if (strcmp(command, "echo") == 0)
+            {
+                int redirectIndex = 1; 
+                for (; args[redirectIndex] != NULL; redirectIndex++)
+                {
+                    if (strcmp(args[redirectIndex], ">>") == 0 || strcmp(args[redirectIndex], ">") == 0)
+                    {
+                        break; 
+                    }
+                }
+
+                if (args[redirectIndex] == NULL)
+                {
+                   
+                    for (int i = 1; args[i] != NULL; i++)
+                    {
+                        printf("%s ", args[i]);
+                    }
+                    printf("\n");
+                }
+                else if (args[redirectIndex + 1] == NULL)
+                {
+                    fprintf(stderr, "Error: Redirection operator '%s' found but no file path specified.\n", args[redirectIndex]);
+                }
+                else
+                {
+                    if (strcmp(args[redirectIndex], ">>") == 0)
+                    {
+                        echoppend(args);
+                    }
+                    else
+                    {
+                        echorite(args);
+                    }
+                }
+            } else if (strcmp(command, "read") == 0) {
+                readI(args);
+            } else if (strcmp(command, "wc") == 0) {
+                wordCount(args);
+            } else {
+                printf("Command not found. Type 'help' for a list of commands.\n");
+            }
+
+            free(args);
         }
 
-        free(arg);
         free(input);
     }
+
     return 0;
-}
-// יש לכתוב את פונקציית הברוכים הבאים כרצונכם אבל קצת יותר ממה שמוצג מטה לדוגמא:
-//                     aSPY//YASa
-//              apyyyyCY//////////YCa       |
-//             sY//////YSpcs  scpCY//Pp     | Welcome to myShell
-//  ayp ayyyyyyySCP//Pp           syY//C    | Version 2.4.3
-//  AYAsAYYYYYYYY///Ps              cY//S   |
-//          pCCCCY//p          cSSps y//Y   | https://github.com/<user>
-//          SPPPP///a          pP///AC//Y   |
-//               A//A            cyP////C   | Have fun!
-//               p///Ac            sC///a   |
-//               P////YCpc           A//A   | Craft packets like it is your last
-//        scccccp///pSP///p          p//Y   | day on earth.
-//       sY/////////y  caa           S//P   |                      -- Lao-Tze
-//        cayCyayP//Ya              pY/Ya   |
-//         sY/PsY////YCc          aC//Yp
-//          sc  sccaCY//PCypaapyCP//YSs
-//                   spCPY//////YPSps
-//                        ccaacs
-//                                        using c                                    using c
-void welcome()
-{
-    printf("           ,--.\n");
-    printf("    ,--.   |  |\n");
-    printf("   |oo  | _\\  | .-.\n");
-    printf("   |~~  |/  \\ |' | \\__\n");
-    printf("   |/\\/\\|  /  \\|  |/  /\n");
-    printf("      \\ \\,/;      \\  /\n");
-    printf("       \\/  \\      | |\n");
-    printf("        |   \\     | |\n");
-    printf("       /    |    /  /\n");
-    printf("      |,/\\  |___|__/\n");
-    printf("      \\ | \\ |   | |\n");
-    printf("       ||\\|     | |\n");
-    printf("       ||||    |  |\n");
-    printf("       \\||    /  \\\n");
-    printf("        `|   |    |\n");
-    printf("         |  |    |\n");
-    printf("        /|  |    |\n");
-    printf("      /  |  |    |\n");
-    printf("    /    |  |    |\n");
-    printf("   |     |  |    |\n");
-    printf("\n");
-}
-void welcome1()
-{
-    printf("           ,--.\n");
-    printf("    ,--.   |  |\n");
-    printf("   |--  | _\\  | .-.\n");
-    printf("   |~~  |/  \\ |' | \\__\n");
-    printf("   |/\\/\\|  /  \\|  |/  /\n");
-    printf("      \\ \\,/;      \\  /\n");
-    printf("       \\/  \\      | |\n");
-    printf("        |   \\     | |\n");
-    printf("       /    |    /  /\n");
-    printf("      |,/\\  |___|__/\n");
-    printf("      \\ | \\ |   | |\n");
-    printf("       ||\\|     | |\n");
-    printf("       ||||    |  |\n");
-    printf("       \\||    /  \\\n");
-    printf("        `|   |    |\n");
-    printf("         |  |    |\n");
-    printf("        /|  |    |\n");
-    printf("      /  |  |    |\n");
-    printf("    /    |  |    |\n");
-    printf("   |     |  |    |\n");
-    printf("\n");
 }
