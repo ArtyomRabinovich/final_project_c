@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "myfunction.h": "c",
+        "ctype.h": "c",
+        "stat.h": "c"
+    }
+}
